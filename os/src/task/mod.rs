@@ -60,6 +60,10 @@ pub fn suspend_current_and_run_next() {
 
 /// Make current task blocked and switch to the next task.
 pub fn block_current_and_run_next() {
+    trace!(
+        "kernel: pid[{}] block_current_and_run_next",
+        current_task().unwrap().process.upgrade().unwrap().getpid()
+    );
     let task = take_current_task().unwrap();
     let mut task_inner = task.inner_exclusive_access();
     let task_cx_ptr = &mut task_inner.task_cx as *mut TaskContext;
@@ -94,6 +98,11 @@ pub fn exit_current_and_run_next(exit_code: i32) {
     } else {
         drop(task);
     }
+
+    let mut process_inner = process.inner_exclusive_access();
+    process_inner.finished[tid] = true;
+    drop(process_inner);
+
     // however, if this is the main thread of current process
     // the process should terminate at once
     if tid == 0 {
