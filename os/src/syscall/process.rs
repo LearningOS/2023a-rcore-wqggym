@@ -1,12 +1,18 @@
 //! Process management syscalls
+// extern crate libc;
 use crate::{
-    config::{MAX_SYSCALL_NUM, PAGE_SIZE},
-    task::{
-        change_program_brk, exit_current_and_run_next, suspend_current_and_run_next,
-        TaskStatus,
-        map,
-        unmap, current_user_token, get_current_task_info,
-    }, timer::get_time_us, mm::translated_mut_ptr,
+    config::PAGE_SIZE,
+    config::MAX_SYSCALL_NUM,
+    task::TaskStatus,
+    task::suspend_current_and_run_next,
+    task::exit_current_and_run_next,
+    task::change_program_brk,
+    task::mmap,
+    task::munmap,
+    task::current_user_token,
+    task::get_current_task_info,
+    timer::get_time_us,
+    mm::translated_mut_ptr
 };
 
 #[repr(C)]
@@ -83,7 +89,7 @@ pub fn sys_mmap(start: usize, len: usize, port: usize) -> isize {
     if start %  PAGE_SIZE != 0 || port & !0x7 != 0 || port &0x7 == 0{
         return -1;
     }
-    map(start, len, port)
+    mmap(start, len, port)
 }
 
 // YOUR JOB: Implement munmap.
@@ -92,8 +98,9 @@ pub fn sys_unmap(start: usize, len: usize) -> isize {
    if start %  PAGE_SIZE != 0 {
         return -1;
     }
-    unmap(start, len)
+    munmap(start, len)
 }
+
 /// change data segment size
 pub fn sys_brk(size: i32) -> isize {
     trace!("kernel: sys_brk");
