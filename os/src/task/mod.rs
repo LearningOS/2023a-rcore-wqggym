@@ -16,7 +16,7 @@ mod task;
 
 use crate::config::{MAX_APP_NUM, MAX_SYSCALL_NUM};
 use crate::loader::{get_num_app, init_app_cx};
-use crate::sync::UPSafeCell;
+
 use crate::timer::get_time_ms;
 use lazy_static::*;
 use switch::__switch;
@@ -24,8 +24,11 @@ pub use task::{TaskControlBlock, TaskStatus};
 
 pub use context::TaskContext;
 
-use crate::atomic::Ordering;
-use crate::vec::Vec;
+use crate::sync::atomic::Ordering;
+
+use alloc::vec::Vec;
+use your_module::UPSafeCell;
+
 
 
 /// The task manager, where all the tasks are managed.
