@@ -54,8 +54,8 @@ impl MemorySet {
     /// Assume that no conflicts.
     pub fn insert_framed_area(
         &mut self,
-        start_va: VirtAddr,
-        end_va: VirtAddr,
+        start_va: usize,
+        end_va: usize,
         permission: MapPermission,
     ) {
         self.push(
@@ -63,6 +63,24 @@ impl MemorySet {
             None,
         );
     }
+    
+    /// delete map area (unmap a area)
+    pub fn delete_frame_area(
+        &mut self,
+        start_va: VirtAddr,
+        end_va: VirtAddr,
+    ) {
+        let start_vpn = VirtPageNum::from(start_va);
+        let end_vpn = VirtPageNum::from(end_va);
+
+        self.areas
+            .for_each_mut(|map_area| {
+                if map_area.vpn_range.get_start() == start_vpn && map_area.vpn_range.get_end() == end_vpn {
+                    map_area.unmap(&mut self.page_table);
+                }
+            });
+    }
+
     fn push(&mut self, mut map_area: MapArea, data: Option<&[u8]>) {
         map_area.map(&mut self.page_table);
         if let Some(data) = data {
