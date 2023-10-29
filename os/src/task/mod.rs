@@ -16,7 +16,7 @@ mod task;
 
 use crate::config::{MAX_APP_NUM, MAX_SYSCALL_NUM};
 use crate::loader::{get_num_app, init_app_cx};
-
+use crate::sync::UPSafeCell;
 use crate::timer::get_time_ms;
 use lazy_static::*;
 use switch::__switch;
@@ -24,13 +24,10 @@ pub use task::{TaskControlBlock, TaskStatus};
 
 pub use context::TaskContext;
 
-use crate::sync::atomic;
-use crate::sync::atomic::Ordering;
+use core::sync::atomic;
+use core::sync::atomic::Ordering;
 
-use alloc::vec::Vec;
-use your_module::UPSafeCell;
-
-
+use std::env;
 
 /// The task manager, where all the tasks are managed.
 ///
@@ -130,7 +127,7 @@ impl TaskManager {
             .map(|id| id % self.num_app)
             .filter(|id| inner.tasks[*id].task_status == TaskStatus::Ready)
             .next()
-    }    
+    }
 
     /// Switch current `Running` task to the task we have found,
     /// or there is no `Ready` task and we can exit with all applications completed
@@ -158,17 +155,17 @@ impl TaskManager {
             None => Err("All applications completed!"),
         }
     }
-    
+
 
     fn add_syscall_time(&self, syscall_id: usize) {
-        let mut inner = self.inner.get_mut().unwrap();
-        let current = inner.current_task.load(Ordering::SeqCst);
+        let mut inner = self.inner.exclusive_access();
+        let current = inner.current_task;
         inner.tasks[current].syscall_times.push_back(syscall_id as u32);
     }
 
     fn get_current_task_info(&self) -> (TaskStatus, Vec<u32>, usize) {
-        let inner = self.inner.try_borrow_mut().unwrap();
-        let current = inner.current_task.load(Ordering::SeqCst);
+        let inner = self.inner.exclusive_access();
+        let current = inner.current_task;
         let tcb = &inner.tasks[current];
         let time_now = get_time_ms();
         let mut syscall_times_cp = Vec::with_capacity(MAX_SYSCALL_NUM);
