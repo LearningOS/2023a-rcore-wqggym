@@ -217,7 +217,7 @@ impl<T> SimpleRange<T>
 where
     T: StepByOne + Copy + PartialEq + PartialOrd + Debug,
 {
-    pub fn new(start: T, end: T) -> Self {
+    pub fn new(start: T, end: usize) -> Self {
         assert!(start <= end, "start {:?} > end {:?}!", start, end);
         Self { l: start, r: end }
     }

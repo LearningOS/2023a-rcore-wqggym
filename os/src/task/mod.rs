@@ -226,7 +226,7 @@ impl TaskManager {
 
         for VirtPageNum(_0) in mm::VPNRange::new(
             VirtPageNum::from(start_va),
-            end_va.ceil()
+            end_va.div_ceil(0)
         ){
             if let Some(pte) =  tcb.memory_set.translate(VirtPageNum(_0)){
                 if pte.is_valid(){
@@ -238,7 +238,7 @@ impl TaskManager {
         tcb.memory_set.insert_framed_area(start_va, end_va, map_permission);
 
         //成功性检查
-        for vpn in mm::VPNRange::new(VirtPageNum::from(start_va), end_va.ceil()){
+        for vpn in mm::VPNRange::new(VirtPageNum::from(start_va), end_va.div_ceil(0)){
             if let None =  tcb.memory_set.translate(vpn){
                 return -1;
             }
@@ -257,7 +257,7 @@ impl TaskManager {
 
         for vpn in mm::VPNRange::new(
             VirtPageNum::from(start_va),
-            end_va.ceil()
+            end_va.div_ceil()
         ){
             match tcb.memory_set.translate(vpn) {
                 Some(pte) => {
