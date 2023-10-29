@@ -14,7 +14,6 @@ mod switch;
 #[allow(clippy::module_inception)]
 mod task;
 
-use alloc::vec::Vec;
 use crate::config::{MAX_APP_NUM, MAX_SYSCALL_NUM};
 use crate::loader::{get_num_app, init_app_cx};
 use crate::sync::UPSafeCell;
@@ -117,13 +116,10 @@ impl TaskManager {
     fn find_next_task(&self) -> Option<usize> {
         let inner = self.inner.exclusive_access();
         let current = inner.current_task;
-        let mut tasks = (current + 1..current + self.num_app + 1)
+        (current + 1..current + self.num_app + 1)
             .map(|id| id % self.num_app)
-            .collect::<Vec<_>>();
-        tasks.retain(|&id| inner.tasks[*id].task_status == TaskStatus::Ready);
-        tasks.first().copied()
+            .find(|id| inner.tasks[*id].task_status == TaskStatus::Ready)
     }
-    
 
     /// Switch current `Running` task to the task we have found,
     /// or there is no `Ready` task and we can exit with all applications completed
