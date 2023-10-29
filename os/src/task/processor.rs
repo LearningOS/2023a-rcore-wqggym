@@ -7,9 +7,7 @@
 use super::__switch;
 use super::{fetch_task, TaskStatus};
 use super::{TaskContext, TaskControlBlock};
-use crate::mm::VirtPageNum;
-use crate::sync::UPSafeCell;
-use crate::trap::TrapContext;
+use crate::*;
 use alloc::sync::Arc;
 use lazy_static::*;
 
@@ -109,24 +107,4 @@ pub fn schedule(switched_task_cx_ptr: *mut TaskContext) {
     unsafe {
         __switch(switched_task_cx_ptr, idle_task_cx_ptr);
     }
-}
-
-/// Request memory for the current task
-pub fn mmap(start_vpn: VirtPageNum, end_vpn: VirtPageNum, port: usize) -> isize {
-    let task = current_task().unwrap();
-    let x = task
-        .inner_exclusive_access()
-        .memory_set
-        .mmap(start_vpn, end_vpn, port);
-    x
-}
-
-/// free memory
-pub fn munmap(start_vpn: VirtPageNum, end_vpn: VirtPageNum) -> isize {
-    let task = current_task().unwrap();
-    let x = task
-        .inner_exclusive_access()
-        .memory_set
-        .munmap(start_vpn, end_vpn);
-    x
 }
