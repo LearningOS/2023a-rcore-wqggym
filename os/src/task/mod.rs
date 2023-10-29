@@ -8,6 +8,7 @@
 //!
 //! Be careful when you see `__switch` ASM function in `switch.S`. Control flow around this function
 //! might not be what you expect.
+extern crate std;
 
 mod context;
 mod switch;
@@ -24,10 +25,6 @@ pub use task::{TaskControlBlock, TaskStatus};
 
 pub use context::TaskContext;
 
-const MAX_APP_NUM: usize = 4; // 根据实际情况修改
-const MAX_SYSCALL_NUM: usize = 16; // 根据实际情况修改
-
-
 /// The task manager, where all the tasks are managed.
 ///
 /// Functions implemented on `TaskManager` deals with all task state transitions
@@ -37,22 +34,6 @@ const MAX_SYSCALL_NUM: usize = 16; // 根据实际情况修改
 /// Most of `TaskManager` are hidden behind the field `inner`, to defer
 /// borrowing checks to runtime. You can see examples on how to use `inner` in
 /// existing functions on `TaskManager`.
-
-struct Task {
-    start_time: u64,
-    syscall_times: VecDeque<u32>,
-}
-
-struct Inner {
-    tasks: Vec<Task>,
-    current_task: AtomicUsize,
-}
-
-pub enum TaskStatus {
-    Ready,
-    Running,
-    Exited,
-}
 
 
 pub struct TaskManager {
@@ -195,11 +176,6 @@ impl TaskManager {
             time_now - tcb.start_time,
         )
     }
-}
-
-fn get_time_ms() -> u64 {
-    let now = std::time::Instant::now();
-    now.duration_since(std::time::Instant::EPOCH).as_millis()
 }
 
 /// Run the first task in task list.
