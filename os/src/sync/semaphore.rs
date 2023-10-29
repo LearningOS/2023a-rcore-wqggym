@@ -52,10 +52,4 @@ impl Semaphore {
             block_current_and_run_next();
         }
     }
-
-    /// get sem count
-    pub fn sem_count(&self) -> i32 {
-        let inner = self.inner.exclusive_access();
-        inner.count as i32
-    }
 }
