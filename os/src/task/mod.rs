@@ -8,7 +8,6 @@
 //!
 //! Be careful when you see `__switch` ASM function in `switch.S`. Control flow around this function
 //! might not be what you expect.
-extern crate std;
 
 mod context;
 mod switch;
@@ -24,6 +23,10 @@ use switch::__switch;
 pub use task::{TaskControlBlock, TaskStatus};
 
 pub use context::TaskContext;
+
+use crate::atomic::Ordering;
+use crate::vec::Vec;
+
 
 /// The task manager, where all the tasks are managed.
 ///
@@ -154,13 +157,13 @@ impl TaskManager {
     
 
     fn add_syscall_time(&self, syscall_id: usize) {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = self.inner.get_mut().unwrap();
         let current = inner.current_task.load(Ordering::SeqCst);
         inner.tasks[current].syscall_times.push_back(syscall_id as u32);
     }
 
     fn get_current_task_info(&self) -> (TaskStatus, Vec<u32>, usize) {
-        let inner = self.inner.lock().unwrap();
+        let inner = self.inner.try_borrow_mut().unwrap();
         let current = inner.current_task.load(Ordering::SeqCst);
         let tcb = &inner.tasks[current];
         let time_now = get_time_ms();
@@ -171,7 +174,7 @@ impl TaskManager {
         }
 
         (
-            TaskStatus { Running: true },
+            TaskStatus::Running,
             syscall_times_cp,
             time_now - tcb.start_time,
         )

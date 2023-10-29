@@ -54,7 +54,7 @@ pub fn sys_get_time(ts: *mut TimeVal, _tz: usize) -> isize {
 pub fn sys_task_info(ti: *mut TaskInfo) -> Result<isize, &'static str> {
     let (status, syscall_times, time) = get_current_task_info();
     unsafe {
-        *ti = std::mem::zeroed();
+        *ti = crate::mem::zeroed();
         (*ti).status = status;
         (*ti).syscall_times = syscall_times;
         (*ti).time = time;
