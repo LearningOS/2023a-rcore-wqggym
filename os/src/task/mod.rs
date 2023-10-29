@@ -24,6 +24,7 @@ pub use task::{TaskControlBlock, TaskStatus};
 
 pub use context::TaskContext;
 
+use crate::sync::atomic;
 use crate::sync::atomic::Ordering;
 
 use alloc::vec::Vec;

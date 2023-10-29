@@ -4,7 +4,8 @@ use crate::{
     task::{exit_current_and_run_next, suspend_current_and_run_next, TaskStatus, get_current_task_info},
     timer::get_time_us,
 };
-use crate::mem;
+use core::mem;
+
 
 #[repr(C)]
 #[derive(Debug)]
