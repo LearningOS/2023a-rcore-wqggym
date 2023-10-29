@@ -24,11 +24,6 @@ pub use task::{TaskControlBlock, TaskStatus};
 
 pub use context::TaskContext;
 
-use core::sync::atomic;
-use core::sync::atomic::Ordering;
-
-use std::env;
-
 /// The task manager, where all the tasks are managed.
 ///
 /// Functions implemented on `TaskManager` deals with all task state transitions
@@ -163,12 +158,12 @@ impl TaskManager {
         inner.tasks[current].syscall_times.push_back(syscall_id as u32);
     }
 
-    fn get_current_task_info(&self) -> (TaskStatus, Vec<u32>, usize) {
+    fn get_current_task_info(&self) -> (TaskStatus, [u32; MAX_SYSCALL_NUM], usize) {
         let inner = self.inner.exclusive_access();
         let current = inner.current_task;
         let tcb = &inner.tasks[current];
         let time_now = get_time_ms();
-        let mut syscall_times_cp = Vec::with_capacity(MAX_SYSCALL_NUM);
+        let mut syscall_times_cp: [u32; MAX_SYSCALL_NUM] = [0; MAX_SYSCALL_NUM];
         for i in 0..tcb.syscall_times.len() {
             // for compatible
             syscall_times_cp.push(tcb.syscall_times[i] as u32);
