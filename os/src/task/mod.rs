@@ -14,6 +14,7 @@ mod switch;
 #[allow(clippy::module_inception)]
 mod task;
 
+use std::vec;
 use crate::config::{MAX_APP_NUM, MAX_SYSCALL_NUM};
 use crate::loader::{get_num_app, init_app_cx};
 use crate::sync::UPSafeCell;
@@ -33,8 +34,6 @@ pub use context::TaskContext;
 /// Most of `TaskManager` are hidden behind the field `inner`, to defer
 /// borrowing checks to runtime. You can see examples on how to use `inner` in
 /// existing functions on `TaskManager`.
-
-
 pub struct TaskManager {
     /// total number of tasks
     num_app: usize,
@@ -118,18 +117,20 @@ impl TaskManager {
     fn find_next_task(&self) -> Option<usize> {
         let inner = self.inner.exclusive_access();
         let current = inner.current_task;
-        (current + 1..current + self.num_app + 1)
+        let mut tasks = (current + 1..current + self.num_app + 1)
             .map(|id| id % self.num_app)
-            .filter(|id| inner.tasks[*id].task_status == TaskStatus::Ready)
-            .next()
+            .collect::<Vec<_>>();
+        tasks.retain(|&id| inner.tasks[*id].task_status == TaskStatus::Ready);
+        tasks.first().copied()
     }
+    
 
     /// Switch current `Running` task to the task we have found,
     /// or there is no `Ready` task and we can exit with all applications completed
-    fn run_next_task(&self) -> Result<(), &'static str> {
+    fn run_next_task(&self) {
+        let inner = self.inner.exclusive_access();
         match self.find_next_task() {
             Some(next) => {
-                let mut inner = self.inner.exclusive_access();
                 let current = inner.current_task;
                 inner.tasks[next].task_status = TaskStatus::Running;
                 if !inner.tasks[next].started {
@@ -145,12 +146,11 @@ impl TaskManager {
                     __switch(current_task_cx_ptr, next_task_cx_ptr);
                 }
                 // go back to user mode
-                Ok(())
             }
-            None => Err("All applications completed!"),
+            None => panic!("All applications completed!"),
         }
     }
-
+    
 
     fn add_syscall_time(&self, syscall_id: usize) {
         let mut inner = self.inner.exclusive_access();
@@ -185,7 +185,7 @@ pub fn run_first_task() {
 /// Switch current `Running` task to the task we have found,
 /// or there is no `Ready` task and we can exit with all applications completed
 fn run_next_task() {
-    let _ = TASK_MANAGER.run_next_task();
+    TASK_MANAGER.run_next_task();
 }
 
 /// Change the status of current `Running` task into `Ready`.

@@ -52,7 +52,7 @@ pub fn sys_get_time(ts: *mut TimeVal, _tz: usize) -> isize {
 
 /// YOUR JOB: Finish sys_task_info to pass testcases
 pub fn sys_task_info(ti: *mut TaskInfo) -> isize {
-    let (status, syscall_times, time) = get_current_task_info();
+    let (status,syscall_times,time) = get_current_task_info();
     unsafe {
         *ti = TaskInfo {
             status,
@@ -62,4 +62,3 @@ pub fn sys_task_info(ti: *mut TaskInfo) -> isize {
     }
     0
 }
-
