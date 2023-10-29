@@ -124,7 +124,7 @@ impl TaskManager {
     /// Switch current `Running` task to the task we have found,
     /// or there is no `Ready` task and we can exit with all applications completed
     fn run_next_task(&self) {
-        let inner = self.inner.exclusive_access();
+        let mut inner = self.inner.exclusive_access();
         match self.find_next_task() {
             Some(next) => {
                 let current = inner.current_task;
@@ -146,7 +146,7 @@ impl TaskManager {
             None => panic!("All applications completed!"),
         }
     }
-    
+
 
     fn add_syscall_time(&self, syscall_id: usize) {
         let mut inner = self.inner.exclusive_access();
