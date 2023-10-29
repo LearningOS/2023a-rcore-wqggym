@@ -185,7 +185,7 @@ pub fn run_first_task() {
 /// Switch current `Running` task to the task we have found,
 /// or there is no `Ready` task and we can exit with all applications completed
 fn run_next_task() {
-    TASK_MANAGER.run_next_task();
+    let _ = TASK_MANAGER.run_next_task();
 }
 
 /// Change the status of current `Running` task into `Ready`.
