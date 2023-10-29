@@ -24,6 +24,10 @@ pub use task::{TaskControlBlock, TaskStatus};
 
 pub use context::TaskContext;
 
+const MAX_APP_NUM: usize = 4; // 根据实际情况修改
+const MAX_SYSCALL_NUM: usize = 16; // 根据实际情况修改
+
+
 /// The task manager, where all the tasks are managed.
 ///
 /// Functions implemented on `TaskManager` deals with all task state transitions
@@ -43,6 +47,13 @@ struct Inner {
     tasks: Vec<Task>,
     current_task: AtomicUsize,
 }
+
+pub enum TaskStatus {
+    Ready,
+    Running,
+    Exited,
+}
+
 
 pub struct TaskManager {
     /// total number of tasks
@@ -129,33 +140,37 @@ impl TaskManager {
         let current = inner.current_task;
         (current + 1..current + self.num_app + 1)
             .map(|id| id % self.num_app)
-            .find(|id| inner.tasks[*id].task_status == TaskStatus::Ready)
-    }
+            .filter(|id| inner.tasks[*id].task_status == TaskStatus::Ready)
+            .next()
+    }    
 
     /// Switch current `Running` task to the task we have found,
     /// or there is no `Ready` task and we can exit with all applications completed
-    fn run_next_task(&self) {
-        if let Some(next) = self.find_next_task() {
-            let mut inner = self.inner.exclusive_access();
-            let current = inner.current_task;
-            inner.tasks[next].task_status = TaskStatus::Running;
-            if !inner.tasks[next].started {
-                inner.tasks[next].start_time = get_time_ms();
-                inner.tasks[next].started = true;
+    fn run_next_task(&self) -> Result<(), &'static str> {
+        match self.find_next_task() {
+            Some(next) => {
+                let mut inner = self.inner.exclusive_access();
+                let current = inner.current_task;
+                inner.tasks[next].task_status = TaskStatus::Running;
+                if !inner.tasks[next].started {
+                    inner.tasks[next].start_time = get_time_ms();
+                    inner.tasks[next].started = true;
+                }
+                inner.current_task = next;
+                let current_task_cx_ptr = &mut inner.tasks[current].task_cx as *mut TaskContext;
+                let next_task_cx_ptr = &inner.tasks[next].task_cx as *const TaskContext;
+                drop(inner);
+                // before this, we should drop local variables that must be dropped manually
+                unsafe {
+                    __switch(current_task_cx_ptr, next_task_cx_ptr);
+                }
+                // go back to user mode
+                Ok(())
             }
-            inner.current_task = next;
-            let current_task_cx_ptr = &mut inner.tasks[current].task_cx as *mut TaskContext;
-            let next_task_cx_ptr = &inner.tasks[next].task_cx as *const TaskContext;
-            drop(inner);
-            // before this, we should drop local variables that must be dropped manually
-            unsafe {
-                __switch(current_task_cx_ptr, next_task_cx_ptr);
-            }
-            // go back to user mode
-        } else {
-            panic!("All applications completed!");
+            None => Err("All applications completed!"),
         }
     }
+    
 
     fn add_syscall_time(&self, syscall_id: usize) {
         let mut inner = self.inner.lock().unwrap();
