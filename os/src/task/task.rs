@@ -68,12 +68,6 @@ pub struct TaskControlBlockInner {
 
     /// Program break
     pub program_brk: usize,
-
-    /// priority
-    pub priority: u8,
-
-    /// stride
-    pub stride: u32,
 }
 
 impl TaskControlBlockInner {
@@ -124,8 +118,6 @@ impl TaskControlBlock {
                     exit_code: 0,
                     heap_bottom: user_sp,
                     program_brk: user_sp,
-                    priority: 16,
-                    stride: 0,
                 })
             },
         };
@@ -199,8 +191,6 @@ impl TaskControlBlock {
                     exit_code: 0,
                     heap_bottom: parent_inner.heap_bottom,
                     program_brk: parent_inner.program_brk,
-                    priority: 16,
-                    stride: 0,
                 })
             },
         });
@@ -248,7 +238,7 @@ impl TaskControlBlock {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Debug, Clone, PartialEq)]
 /// task status: UnInit, Ready, Running, Exited
 pub enum TaskStatus {
     /// uninitialized
