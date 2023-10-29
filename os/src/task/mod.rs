@@ -257,7 +257,7 @@ impl TaskManager {
 
         for vpn in mm::VPNRange::new(
             VirtPageNum::from(start_va),
-            end_va.div_ceil()
+            usize::from(end_va.ceil())
         ){
             match tcb.memory_set.translate(vpn) {
                 Some(pte) => {
