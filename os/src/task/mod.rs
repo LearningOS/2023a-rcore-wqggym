@@ -336,8 +336,8 @@ pub fn get_current_task_info() -> (TaskStatus, [u32; MAX_SYSCALL_NUM], usize) {
     TaskManager::get_current_task_info(&TASK_MANAGER)
 }
 
-/// map
-pub fn map(
+/// mmap
+pub fn mmap(
     start: usize,
     len: usize,
     port: usize
@@ -350,8 +350,8 @@ pub fn map(
     )
 }
 
-/// unmap
-pub fn unmap(
+/// munmap
+pub fn munmap(
     start: usize,
     len: usize
 ) -> isize {
