@@ -14,7 +14,7 @@ mod switch;
 #[allow(clippy::module_inception)]
 mod task;
 
-use crate::config::{MAX_APP_NUM, MAX_SYSCALL_NUM};
+use crate::config::MAX_APP_NUM;
 use crate::loader::{get_num_app, init_app_cx};
 use crate::sync::UPSafeCell;
 use crate::timer::get_time_ms;
@@ -57,7 +57,7 @@ lazy_static! {
             task_status: TaskStatus::UnInit,
             start_time: 0,
             started: false,
-            syscall_times: [0;MAX_SYSCALL_NUM],
+            syscall_times: [0;MAX_APP_NUM],
         }; MAX_APP_NUM];
         for (i, task) in tasks.iter_mut().enumerate() {
             task.task_cx = TaskContext::goto_restore(init_app_cx(i));
@@ -124,42 +124,41 @@ impl TaskManager {
     /// Switch current `Running` task to the task we have found,
     /// or there is no `Ready` task and we can exit with all applications completed
     fn run_next_task(&self) {
-        let mut inner = self.inner.exclusive_access();
-        match self.find_next_task() {
-            Some(next) => {
-                let current = inner.current_task;
-                inner.tasks[next].task_status = TaskStatus::Running;
-                if !inner.tasks[next].started {
-                    inner.tasks[next].start_time = get_time_ms();
-                    inner.tasks[next].started = true;
-                }
-                inner.current_task = next;
-                let current_task_cx_ptr = &mut inner.tasks[current].task_cx as *mut TaskContext;
-                let next_task_cx_ptr = &inner.tasks[next].task_cx as *const TaskContext;
-                drop(inner);
-                // before this, we should drop local variables that must be dropped manually
-                unsafe {
-                    __switch(current_task_cx_ptr, next_task_cx_ptr);
-                }
-                // go back to user mode
+        if let Some(next) = self.find_next_task() {
+            let mut inner = self.inner.exclusive_access();
+            let current = inner.current_task;
+            inner.tasks[next].task_status = TaskStatus::Running;
+            if !inner.tasks[next].started {
+                inner.tasks[next].start_time = get_time_ms();
+                inner.tasks[next].started = true;
             }
-            None => panic!("All applications completed!"),
+            inner.current_task = next;
+            let current_task_cx_ptr = &mut inner.tasks[current].task_cx as *mut TaskContext;
+            let next_task_cx_ptr = &inner.tasks[next].task_cx as *const TaskContext;
+            drop(inner);
+            // before this, we should drop local variables that must be dropped manually
+            unsafe {
+                __switch(current_task_cx_ptr, next_task_cx_ptr);
+            }
+            // go back to user mode
+        } else {
+            panic!("All applications completed!");
         }
     }
 
-
-    fn add_syscall_time(&self, syscall_id: usize) {
+    fn increase_current_syscall_count(&self, syscall_id: usize) {
         let mut inner = self.inner.exclusive_access();
         let current = inner.current_task;
         inner.tasks[current].syscall_times[syscall_id] += 1;
+
     }
 
-    fn get_current_task_info(&self) -> (TaskStatus, [u32; MAX_SYSCALL_NUM], usize) {
+    fn get_current_task_info(&self) -> (TaskStatus, [u32; MAX_APP_NUM], usize) {
         let inner = self.inner.exclusive_access();
         let current = inner.current_task;
         let tcb = inner.tasks[current];
         let time_now = get_time_ms();
-        let mut syscall_times_cp: [u32; MAX_SYSCALL_NUM] = [0; MAX_SYSCALL_NUM];
+        let mut syscall_times_cp: [u32; MAX_APP_NUM] = [0; MAX_APP_NUM];
         for i in 0..tcb.syscall_times.len() {
             // for compatible
             syscall_times_cp[i] = tcb.syscall_times[i] as u32;
@@ -206,12 +205,15 @@ pub fn exit_current_and_run_next() {
     run_next_task();
 }
 
-/// Get current task info
-pub fn get_current_task_info() -> (TaskStatus, [u32; MAX_SYSCALL_NUM], usize) {
-    TASK_MANAGER.get_current_task_info()
+/// increase_current_syscall_count
+pub fn increase_current_syscall_count(syscall_id: usize) {
+    if syscall_id >= MAX_APP_NUM {
+        return;
+    }
+    TASK_MANAGER.increase_current_syscall_count(syscall_id);
 }
 
-/// Add syscall times
-pub fn add_syscall_time(syscall_id: usize) {
-    TASK_MANAGER.add_syscall_time(syscall_id)
+/// get_current_task_info
+pub fn get_current_task_info() -> (TaskStatus, [u32; MAX_APP_NUM], usize) {
+    TASK_MANAGER.get_current_task_info()
 }
